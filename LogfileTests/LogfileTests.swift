@@ -41,6 +41,7 @@ class LogfileTests: XCTestCase {
         let teststr = "0123456789\n"
         var localsize: UInt64 = 0
         Logfile.clear()
+        Logfile.maxLogSize = 100
 
         let nLoops = (Int(Logfile.maxLogSize) / teststr.characters.count) + 1
         (0 ..< nLoops).forEach { _ in
@@ -59,6 +60,7 @@ class LogfileTests: XCTestCase {
         let teststr = "0123456789\n"
         var localsize = 0
         Logfile.clear()
+        Logfile.maxLogSize = 100
 
         let nLoops = (Int(Logfile.maxLogSize) / teststr.characters.count) + 1
         (0 ..< nLoops).forEach { _ in

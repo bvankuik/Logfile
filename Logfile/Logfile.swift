@@ -18,7 +18,8 @@ class Logfile {
     private let logfileName = "logfile.txt"
     private let oldLogExtension = "old"
 
-    static let maxLogSize: UInt64 = 100 // 1024*1024*100
+    static var maxLogSize: UInt64 = Logfile.defaultMaxLogSize
+    static let defaultMaxLogSize: UInt64 = 1024*1024*100
 
     // MARK: - Static functions
 
