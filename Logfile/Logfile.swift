@@ -16,11 +16,32 @@ class Logfile {
     private var logfileURL: URL?
     private var logfileHandle: FileHandle?
     private let logfileName = "logfile.txt"
+    private let oldLogExtension = "old"
+
+    static let maxLogSize: UInt64 = 100 // 1024*1024*100
 
     // MARK: - Static functions
 
+    static func gather() -> String {
+        var result: String = ""
+
+        let urls = [Logfile.shared.makeLogfileURL(), Logfile.shared.makeOldLogfileURL()]
+        urls.forEach {
+            if let contents = try? String(contentsOf: $0) {
+                result.append(contents)
+            }
+        }
+
+        return result
+    }
+
     static func write(line: String) {
-        Logfile.shared.write(line: line)
+        if line.hasSuffix("\n") {
+            Logfile.shared.write(line: line)
+        } else {
+            Logfile.shared.write(line: line + "\n")
+        }
+        Logfile.shared.rotate()
     }
 
     static func clear() {
@@ -32,6 +53,45 @@ class Logfile {
     }
 
     // MARK: - Private functions
+
+    private func rotate() {
+        guard self.size() > Logfile.maxLogSize else {
+            return
+        }
+
+        guard let fileHandle = self.logfileHandle, let url = self.logfileURL else {
+            fatalError("No filehandle for logfile")
+        }
+
+        fileHandle.closeFile()
+
+        self.removeOldLogfile()
+
+        let oldURL = self.makeOldLogfileURL()
+        do {
+            try FileManager.default.moveItem(at: url, to: oldURL)
+        } catch {
+            print("Warning: issue moving file [\(url)] to [\(oldURL)], error:")
+            print(error.localizedDescription)
+        }
+
+        self.logfileURL = nil
+        self.logfileHandle = nil
+        self.start()
+    }
+
+    private func removeOldLogfile() {
+        let oldURL = self.makeOldLogfileURL()
+        do {
+            let exists = try oldURL.checkResourceIsReachable()
+            if exists {
+                try FileManager.default.removeItem(at: oldURL)
+            }
+        } catch {
+            print("Warning: issue when deleting old log file [\(oldURL)]:")
+            print(error.localizedDescription)
+        }
+    }
 
     private func size() -> UInt64 {
         guard let url = self.logfileURL else {
@@ -65,6 +125,8 @@ class Logfile {
         }
 
         fileHandle.truncateFile(atOffset: 0)
+
+        self.removeOldLogfile()
     }
 
     private func start() {
@@ -83,9 +145,19 @@ class Logfile {
         }
     }
 
-    private func makeLogfileURL() -> URL {
+    private func makeOldLogfileURL() -> URL {
         let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
 
+        guard let documentDirectory = urls.first else {
+            fatalError("Couldn't get documents directory!")
+        }
+
+        let url = documentDirectory.appendingPathComponent(self.logfileName).appendingPathExtension(self.oldLogExtension)
+        return url
+    }
+
+    private func makeLogfileURL() -> URL {
+        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
 
         guard let documentDirectory = urls.first else {
             fatalError("Couldn't get documents directory!")
@@ -94,7 +166,7 @@ class Logfile {
         let url = documentDirectory.appendingPathComponent(self.logfileName)
 
         do {
-            let exists = try url.checkResourceIsReachable()
+            _ = try url.checkResourceIsReachable()
             return url
         } catch {
             let string = ""

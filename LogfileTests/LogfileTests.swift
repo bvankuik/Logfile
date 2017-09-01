@@ -22,8 +22,6 @@ class LogfileTests: XCTestCase {
     }
     
     func testWrite() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
         let startsize = Logfile.size()
         Logfile.write(line: "test")
         let stopsize = Logfile.size()
@@ -37,6 +35,39 @@ class LogfileTests: XCTestCase {
         let newsize = Logfile.size()
         XCTAssert(newsize < size, "After clearing logfile, size should've become smaller")
         XCTAssert(newsize == 0, "After clearing logfile, size should've become zero")
+    }
+
+    func testRotate() {
+        let teststr = "0123456789\n"
+        var localsize: UInt64 = 0
+        Logfile.clear()
+
+        let nLoops = (Int(Logfile.maxLogSize) / teststr.characters.count) + 1
+        (0 ..< nLoops).forEach { _ in
+            localsize += UInt64(teststr.characters.count)
+            let sizeBeforeRotate = Logfile.size()
+            Logfile.write(line: teststr)
+
+            if localsize > Logfile.maxLogSize {
+                let sizeAfterRotate = Logfile.size()
+                XCTAssert(sizeAfterRotate < sizeBeforeRotate, "After log rotation, the new size should be small")
+            }
+        }
+    }
+
+    func testGather() {
+        let teststr = "0123456789\n"
+        var localsize = 0
+        Logfile.clear()
+
+        let nLoops = (Int(Logfile.maxLogSize) / teststr.characters.count) + 1
+        (0 ..< nLoops).forEach { _ in
+            localsize += teststr.characters.count
+            Logfile.write(line: teststr)
+        }
+
+        let result = Logfile.gather()
+        XCTAssert(result.characters.count == localsize, "Gathered log doesn't have correct size")
     }
     
 }
