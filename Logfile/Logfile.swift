@@ -136,6 +136,8 @@ class Logfile {
             fatalError("Couldn't get URL for logfile")
         }
 
+        self.touch()
+
         if self.logfileHandle == nil {
             do {
                 self.logfileHandle = try FileHandle(forWritingTo: url)
@@ -146,36 +148,32 @@ class Logfile {
     }
 
     private func makeOldLogfileURL() -> URL {
-        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
-
-        guard let documentDirectory = urls.first else {
-            fatalError("Couldn't get documents directory!")
-        }
-
-        let url = documentDirectory.appendingPathComponent(self.logfileName).appendingPathExtension(self.oldLogExtension)
-        return url
+        return self.makeURL(filename: self.logfileName, fileExtension: self.oldLogExtension)
     }
 
     private func makeLogfileURL() -> URL {
-        let urls = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)
+        return self.makeURL(filename: self.logfileName, fileExtension: nil)
+    }
 
-        guard let documentDirectory = urls.first else {
+    private func touch() {
+        let url = makeLogfileURL()
+
+        if !FileManager.default.fileExists(atPath: url.path) {
+            FileManager.default.createFile(atPath: url.path, contents: nil, attributes: nil)
+        }
+    }
+
+    private func makeURL(filename: String, fileExtension: String?) -> URL {
+        let urls = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+
+        guard let directory = urls.first else {
             fatalError("Couldn't get documents directory!")
         }
 
-        let url = documentDirectory.appendingPathComponent(self.logfileName)
-
-        do {
-            _ = try url.checkResourceIsReachable()
-            return url
-        } catch {
-            let string = ""
-            do {
-                try string.write(to: url, atomically: true, encoding: .utf8)
-                return url
-            } catch {
-                fatalError("Couldn't create logfile: \(error.localizedDescription)")
-            }
+        if let ext = fileExtension {
+            return directory.appendingPathComponent(filename).appendingPathExtension(ext)
+        } else {
+            return directory.appendingPathComponent(filename)
         }
     }
 
