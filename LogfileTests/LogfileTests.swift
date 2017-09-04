@@ -71,5 +71,45 @@ class LogfileTests: XCTestCase {
         let result = Logfile.gather()
         XCTAssert(result.characters.count == localsize, "Gathered log doesn't have correct size")
     }
+
+    func testCopyForSharing() {
+        let teststr = "ten_chars\n"
+        Logfile.clear()
+        Logfile.maxLogSize = 100
+
+        let nLoops = ((Int(Logfile.maxLogSize) / teststr.characters.count) * 2) + 1
+        (0 ..< nLoops).forEach { _ in
+            Logfile.write(line: teststr)
+        }
+
+        let url = Logfile.urlForSharing()
+
+        guard let attr = try? FileManager.default.attributesOfItem(atPath: url.path) else {
+            XCTFail()
+            return
+        }
+        let filesize = attr[FileAttributeKey.size] as! UInt64
+        let expectedSize = Logfile.maxLogSize + UInt64(teststr.characters.count)
+
+        XCTAssert(filesize == expectedSize, "Log copy for sharing: incorrect size")
+    }
+
+    func testOverflow() {
+        let teststr = "ABCDEFGHI\n"
+        Logfile.clear()
+        let size = 100
+        Logfile.maxLogSize = UInt64(size)
+
+        // This should result in an overwrite of the previous log
+        let nLoops = ((Int(Logfile.maxLogSize) / teststr.characters.count) * 2) + 1
+
+        (0 ..< nLoops).forEach { _ in
+            Logfile.write(line: teststr)
+        }
+
+        let expected = teststr.characters.count + size
+        let actual = Logfile.gather().characters.count
+        XCTAssert(expected == actual, "Recently overflowed log doesn't have correct size")
+    }
     
 }

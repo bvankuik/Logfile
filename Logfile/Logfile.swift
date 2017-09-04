@@ -24,16 +24,13 @@ class Logfile {
     // MARK: - Static functions
 
     static func gather() -> String {
-        var result: String = ""
+        let contents = Logfile.shared.gather()
+        return contents
+    }
 
-        let urls = [Logfile.shared.makeLogfileURL(), Logfile.shared.makeOldLogfileURL()]
-        urls.forEach {
-            if let contents = try? String(contentsOf: $0) {
-                result.append(contents)
-            }
-        }
-
-        return result
+    static func urlForSharing() -> URL {
+        let url = Logfile.shared.urlForSharing()
+        return url
     }
 
     static func write(line: String) {
@@ -55,8 +52,43 @@ class Logfile {
 
     // MARK: - Private functions
 
+    private func urlForSharing() -> URL {
+        let tmpURL = Logfile.shared.pathForTemporaryFile(with: "Logfile")
+
+        let contents = self.gather()
+        do {
+            try contents.write(to: tmpURL, atomically: true, encoding: .utf8)
+        } catch {
+            print("Warning: issue creating file [\(tmpURL)], error: \(error.localizedDescription)")
+        }
+
+        return tmpURL
+    }
+
+
+    private func pathForTemporaryFile(with prefix: String) -> URL {
+        let uuid = UUID().uuidString
+        let pathComponent = "\(prefix)-\(uuid)"
+        var tempPath = URL(fileURLWithPath: NSTemporaryDirectory())
+        tempPath.appendPathComponent(pathComponent)
+        return tempPath
+    }
+
+    private func gather() -> String {
+        var result: String = ""
+
+        let urls = [self.makeLogfileURL(), self.makeOldLogfileURL()]
+        urls.forEach {
+            if let contents = try? String(contentsOf: $0) {
+                result.append(contents)
+            }
+        }
+
+        return result
+    }
+
     private func rotate() {
-        guard self.size() > Logfile.maxLogSize else {
+        guard self.size() >= Logfile.maxLogSize else {
             return
         }
 
