@@ -17,9 +17,11 @@ class Logfile {
     private var logfileHandle: FileHandle?
     private let logfileName = "logfile.txt"
     private let oldLogExtension = "old"
+    private let dateFormatter = DateFormatter()
 
     static var maxLogSize: UInt64 = Logfile.defaultMaxLogSize
     static let defaultMaxLogSize: UInt64 = 1024*1024*100
+    static var includeDate: Bool = false
 
     // MARK: - Static functions
 
@@ -145,8 +147,16 @@ class Logfile {
             fatalError("First open logfile for writing")
         }
 
+        let lineToWrite: String
+        if Logfile.includeDate {
+            let dateString = self.dateFormatter.string(from: Date())
+            lineToWrite = "\(dateString) \(line)"
+        } else {
+            lineToWrite = line
+        }
+
         fileHandle.seekToEndOfFile()
-        if let data = line.data(using: .utf8) {
+        if let data = lineToWrite.data(using: .utf8) {
             fileHandle.write(data)
             fileHandle.synchronizeFile()
         }
@@ -212,6 +222,8 @@ class Logfile {
 
     private init() {
         self.start()
+        self.dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        self.dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
     }
 
 }

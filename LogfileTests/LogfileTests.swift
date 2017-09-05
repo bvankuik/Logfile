@@ -94,6 +94,21 @@ class LogfileTests: XCTestCase {
         XCTAssert(filesize == expectedSize, "Log copy for sharing: incorrect size")
     }
 
+    func testDate() {
+        let teststr = "ten_chars\n"
+        Logfile.clear()
+        Logfile.includeDate = true
+        Logfile.write(line: teststr)
+        Logfile.includeDate = false
+        let result = Logfile.gather()
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.dateFormat = "yyyy-MM-dd'T'HH"
+        let expected = dateFormatter.string(from: Date())
+        XCTAssert(result.hasPrefix(expected), "Expected log to be prefixed with date")
+    }
+
     func testOverflow() {
         let teststr = "ABCDEFGHI\n"
         Logfile.clear()
